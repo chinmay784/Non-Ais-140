@@ -43,6 +43,10 @@ tcpServer.listen(6000, () => {
 
 // ================== API (PORT 2000) ==================
 
+app.get("/",(req,res)=>{
+    res.send("Server Is working Now")
+})
+
 // 👉 Get all devices
 app.get("/devices", (req, res) => {
     res.json(latestData);
