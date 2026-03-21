@@ -143,7 +143,7 @@ const tcpServer = net.createServer((socket) => {
             console.log("📦 7979 Packet Received");
 
             try {
-                const imeiBuffer = data.slice(5, 13);
+                const imeiBuffer = data.slice(7, 15);
                 const imei = imeiBuffer.toString("hex").replace(/^0+/, "");
 
                 console.log("✅ IMEI (7979):", imei);
