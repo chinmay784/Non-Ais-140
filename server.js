@@ -71,7 +71,6 @@
 
 
 
-
 const express = require("express");
 const net = require("net");
 
@@ -95,45 +94,62 @@ const tcpServer = net.createServer((socket) => {
         if (hex.startsWith("78781101")) {
             console.log("🔐 Login Packet Received");
 
-            // 👉 Extract IMEI (optional)
+            // 👉 Extract IMEI (approx)
             const imeiHex = hex.substring(8, 24);
             const imei = parseInt(imeiHex, 16).toString();
             console.log("IMEI:", imei);
 
-            // 👉 Send ACK (VERY IMPORTANT)
+            socket.imei = imei; // store in socket
+
+            // 👉 Send ACK
             const response = Buffer.from("787805010001d9dc0d0a", "hex");
             socket.write(response);
             console.log("✅ Login ACK Sent");
+            return;
+        }
 
+        // ================= HEARTBEAT PACKET =================
+        if (hex.startsWith("78780a13")) {
+            console.log("💓 Heartbeat Packet");
+
+            const response = Buffer.from("787805130001d9dc0d0a", "hex");
+            socket.write(response);
+            console.log("✅ Heartbeat ACK Sent");
             return;
         }
 
         // ================= GPS DATA PACKET =================
-        if (hex.includes("12")) {
+        if (hex.startsWith("787822")) {
             console.log("📍 GPS Packet Received");
 
             try {
-                // 👉 Extract LAT/LON (GT06 basic parsing)
-                const latHex = hex.substring(22, 30);
-                const lonHex = hex.substring(30, 38);
+                const buffer = data;
 
-                const lat = parseInt(latHex, 16) / 1800000;
-                const lon = parseInt(lonHex, 16) / 1800000;
+                // 👉 Correct parsing using buffer
+                const lat = buffer.readUInt32BE(11) / 1800000;
+                const lon = buffer.readUInt32BE(15) / 1800000;
+                const speed = buffer.readUInt8(19);
 
-                console.log("Parsed:", { lat, lon });
+                const imei = socket.imei || "unknown";
+
+                console.log("✅ Parsed:", { imei, lat, lon, speed });
 
                 // 👉 Store data
-                latestData["device1"] = {
-                    imei: "device1",
+                latestData[imei] = {
+                    imei,
                     lat,
                     lon,
+                    speed,
                     time: new Date()
                 };
 
             } catch (err) {
                 console.log("❌ Parsing Error:", err.message);
             }
+            return;
         }
+
+        console.log("⚠️ Unknown Packet");
     });
 
     socket.on("end", () => {
