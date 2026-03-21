@@ -11,9 +11,11 @@ let latestData = {};
 
 // ================== TCP SERVER (PORT 5000) ==================
 const tcpServer = net.createServer((socket) => {
-    console.log("Device Connected");
+    console.log("✅ Device Connected:", socket.remoteAddress);
+
 
     socket.on("data", (data) => {
+        console.log("📡 RAW DATA:", data); // 👈 important
         const msg = data.toString();
         console.log("TCP DATA:", msg);
 
@@ -43,7 +45,7 @@ tcpServer.listen(6000, () => {
 
 // ================== API (PORT 2000) ==================
 
-app.get("/",(req,res)=>{
+app.get("/", (req, res) => {
     res.send("Server Is working Now")
 })
 
