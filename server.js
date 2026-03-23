@@ -347,6 +347,7 @@ const tcpServer = net.createServer((socket) => {
 
                 const imei = socket.imei || "unknown";
 
+                console.log(latestData)
                 console.log("✅ Parsed:", { imei, lat, lon, speed });
 
                 latestData[imei] = {
