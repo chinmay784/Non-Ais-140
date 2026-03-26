@@ -426,7 +426,6 @@
 // });
 
 
-
 const express = require("express");
 const net = require("net");
 
@@ -438,7 +437,7 @@ const PORT = process.env.PORT || 2000;
 // 👉 Store latest GPS data
 let latestData = {};
 
-// ================== IMEI DECODE FUNCTION ==================
+// ================== IMEI DECODE ==================
 function decodeIMEI(buffer) {
     let imei = "";
 
@@ -461,7 +460,14 @@ const tcpServer = net.createServer((socket) => {
 
     socket.on("data", (data) => {
         const hex = data.toString("hex");
-        console.log("📡 HEX:", hex);
+
+        console.log("\n==============================");
+        console.log("📡 RAW HEX:", hex);
+
+        // 👉 Show packet type
+        if (hex.length > 10) {
+            console.log("📦 PACKET TYPE:", hex.substring(6, 10));
+        }
 
         // ================= LOGIN PACKET =================
         if (hex.startsWith("78781101")) {
@@ -473,9 +479,9 @@ const tcpServer = net.createServer((socket) => {
 
                 console.log("✅ Correct IMEI (LOGIN):", imei);
 
-                socket.imei = imei; // ✅ SET ONLY HERE
+                socket.imei = imei;
 
-                // 👉 Send ACK
+                // ACK
                 const response = Buffer.from("787805010001d9dc0d0a", "hex");
                 socket.write(response);
                 console.log("✅ Login ACK Sent");
@@ -496,8 +502,6 @@ const tcpServer = net.createServer((socket) => {
 
                 console.log("⚠️ 7979 IMEI (IGNORED):", imei);
 
-                // ❌ DO NOT assign socket.imei here
-
             } catch (err) {
                 console.log("❌ 7979 Parse Error:", err.message);
             }
@@ -515,13 +519,16 @@ const tcpServer = net.createServer((socket) => {
             return;
         }
 
-        // ================= GPS DATA =================
-        if (hex.startsWith("787822")) {
+        // ================= GPS PACKETS =================
+        if (
+            hex.startsWith("787822") ||
+            hex.startsWith("787812") ||
+            hex.startsWith("787824")
+        ) {
             console.log("📍 GPS Packet Received");
 
-            // 👉 Ensure IMEI exists
             if (!socket.imei) {
-                console.log("⚠️ IMEI not set yet (waiting for login), skipping...");
+                console.log("⚠️ IMEI not set yet, skipping GPS...");
                 return;
             }
 
@@ -532,16 +539,20 @@ const tcpServer = net.createServer((socket) => {
                 const lon = buffer.readUInt32BE(15) / 1800000;
                 const speed = buffer.readUInt8(19);
 
-                // 👉 COURSE / STATUS (2 bytes)
+                // Course / heading
                 const courseStatus = buffer.readUInt16BE(20);
-
-                // 👉 Extract heading (last 10 bits)
                 const heading = courseStatus & 0x03FF;
 
                 const imei = socket.imei;
 
                 console.log("📡 Active IMEI:", imei);
-                console.log("✅ Parsed:", { imei, lat, lon, speed, heading });
+                console.log("✅ GPS DATA:", {
+                    imei,
+                    lat,
+                    lon,
+                    speed,
+                    heading
+                });
 
                 latestData[imei] = {
                     imei,
@@ -553,8 +564,9 @@ const tcpServer = net.createServer((socket) => {
                 };
 
             } catch (err) {
-                console.log("❌ Parsing Error:", err.message);
+                console.log("❌ GPS Parse Error:", err.message);
             }
+
             return;
         }
 
@@ -580,12 +592,10 @@ app.get("/", (req, res) => {
     res.send("Server Is Working Now ✅");
 });
 
-// 👉 Get all devices
 app.get("/devices", (req, res) => {
     res.json(latestData);
 });
 
-// 👉 Get single device
 app.get("/device/:imei", (req, res) => {
     const data = latestData[req.params.imei];
     res.json(data || { message: "No data found" });
@@ -593,5 +603,4 @@ app.get("/device/:imei", (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🌐 HTTP Server Running On Port: ${PORT}`);
-    console.log(`👉 http://localhost:${PORT}`);
 });
