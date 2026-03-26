@@ -301,18 +301,34 @@ const tcpServer = net.createServer((socket) => {
         if (hex.startsWith("78781101")) {
             console.log("🔐 Login Packet Received");
 
-            try {
-                const imeiHex = hex.substring(8, 24);
+            // try {
+            //     const imeiHex = hex.substring(8, 24);
 
-                // 👉 FIX BCD
-                let imei = imeiHex.substring(1);
-                imei = imei.substring(0, 15);
+            //     // 👉 FIX BCD
+            //     let imei = imeiHex.substring(1);
+            //     imei = imei.substring(0, 15);
+
+            //     console.log("✅ Correct IMEI (LOGIN):", imei);
+
+            //     socket.imei = imei;
+
+            //     // 👉 Send ACK
+            //     const response = Buffer.from("787805010001d9dc0d0a", "hex");
+            //     socket.write(response);
+            //     console.log("✅ Login ACK Sent");
+
+            // } catch (err) {
+            //     console.log("❌ Login Parse Error:", err.message);
+            // }
+
+            try {
+                const imeiBuffer = data.slice(4, 12);
+                const imei = decodeIMEI(imeiBuffer);
 
                 console.log("✅ Correct IMEI (LOGIN):", imei);
 
-                socket.imei = imei;
+                socket.imei = imei; // ✅ SET ONLY HERE
 
-                // 👉 Send ACK
                 const response = Buffer.from("787805010001d9dc0d0a", "hex");
                 socket.write(response);
                 console.log("✅ Login ACK Sent");
@@ -354,7 +370,7 @@ const tcpServer = net.createServer((socket) => {
                 const heading = courseStatus & 0x03FF;
 
                 console.log(latestData)
-                console.log("✅ Parsed:", { imei, lat, lon, speed ,heading});
+                console.log("✅ Parsed:", { imei, lat, lon, speed, heading });
 
                 latestData[imei] = {
                     imei,
