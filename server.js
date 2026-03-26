@@ -347,14 +347,21 @@ const tcpServer = net.createServer((socket) => {
 
                 const imei = socket.imei || "unknown";
 
+                // 👉 COURSE / STATUS (2 bytes)
+                const courseStatus = buffer.readUInt16BE(20);
+
+                // 👉 Extract heading (last 10 bits)
+                const heading = courseStatus & 0x03FF;
+
                 console.log(latestData)
-                console.log("✅ Parsed:", { imei, lat, lon, speed });
+                console.log("✅ Parsed:", { imei, lat, lon, speed ,heading});
 
                 latestData[imei] = {
                     imei,
                     lat,
                     lon,
                     speed,
+                    heading,
                     time: new Date()
                 };
 
